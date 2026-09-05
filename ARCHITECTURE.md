@@ -238,6 +238,27 @@ Every screen shows confidence + "why" (score breakdown) + one-click links back t
 
 ---
 
+### 4.11 Business Context Plane (post-benchmark; see `docs/BUSINESS_LAYER_PLAN.md`)
+
+Feeds the wedge, doesn't replace it: reorders which clusters get investigated
+and adds a "why this matters" section to investigations/PRs.
+
+1. **Goals:** per-tenant `goals.yaml` (north-star, weighted revenue-linked funnels,
+   guardrails). Pure parse/validate lib; invalid configs fail closed, unmapped
+   services get weight 0 with a visible flag — never silent defaults.
+2. **Analytics ingest:** PostHog connector first (funnels + events), same webhook/
+   backfill pattern as Sentry. `funnel_events` table (Postgres now, ClickHouse-shape
+   + 90d TTL later, RLS).
+3. **Joiner:** correlation lib extended with `funnel_step + time window` keys —
+   drop-off steps link to error groups, latency deltas, deploys, ticket clusters.
+4. **Impact estimator:** pure function → statements with stated uncertainty;
+   unattributable impact renders `"unquantified"`, never fabricated `$`.
+5. **Opportunity stream:** §8 score + explicit `goals.yaml` business-weight term,
+   read-only ranking until wedge kill bars pass.
+6. **Watcher:** scheduler over existing endpoints + dedupe + Slack digest.
+
+---
+
 ## 5. Recommended Tech Stack
 
 | Layer | Pick | Why | Alternative |
@@ -292,6 +313,8 @@ audit_log(id, tenant_id, actor, action, args_json, created_at);
 
 Nodes: `(:User)-[:REPORTED]->(:Feedback)-[:IN]->(:IssueCluster)-[:AFFECTS]->(:Feature)-[:IMPLEMENTED_BY]->(:Service)-[:CONTAINS]->(:CodeUnit)<-[:TOUCHED]-(:Commit)<-[:INCLUDES]-(:PR)-[:DEPLOYED_AS]->(:Deployment)-[:EMITS]->(:ErrorGroup)`, plus `(:MetricAnomaly)-[:CORRELATED_WITH]->(:IssueCluster)`, `(:Test)-[:COVERS]->(:CodeUnit)`.
 
+Business-layer additions (post-benchmark): `(:FunnelStep)-[:STEP_EMITS]->(:Metric)`, `(:FunnelStep)-[:MEASURED_BY]->(:Service)`, `(:BusinessGoal)-[:WEIGHTS]->(:FunnelStep)`, `(:IssueCluster)-[:THREATENS]->(:FunnelStep)`, `(:Experiment)-[:TESTS]->(:FunnelStep)`. Same deterministic-edge discipline; file backend first, Neo4j later.
+
 Deterministic edges from workers; hypothesis edges (`:LIKELY_CAUSED_BY {confidence, reason}`) from agent, TTL until human verdict.
 
 Example:
@@ -307,7 +330,7 @@ RETURN s, d, cm, u, e ORDER BY e.count DESC LIMIT 10
 
 ## 8. Prioritization + Confidence
 
-**Priority:** `score = 0.3*severity(1-5) + 0.25*log10(1+count) + 0.25*biz_impact(0-1 from plan/ARR tag + affected paid cohort) + 0.2*confidence(0-1) - 0.15*effort(0-1 from diff size + risk)`. Show breakdown in UI; tenant-tunable weights.
+**Priority:** `score = 0.3*severity(1-5) + 0.25*log10(1+count) + 0.25*biz_impact(0-1 from plan/ARR tag + affected paid cohort) + 0.2*confidence(0-1) - 0.15*effort(0-1 from diff size + risk)`. Show breakdown in UI; tenant-tunable weights. Post-benchmark, the Business Context Plane (§4.11) feeds `biz_impact` from `goals.yaml` weights as an explicit, visible term.
 
 **Confidence:** starts 0.5; +0.15 telemetry match, +0.15 deploy proximity, +0.1 blame strength, +0.1 multi-source agreement; −0.2 contradictory evidence, −0.3 no telemetry. `<0.55` → "needs info", never auto-draft-PR.
 
