@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CanonicalFeedbackEvent",
+  "type": "object",
+  "required": ["tenant_id", "source", "type", "occurred_at", "title", "body"],
+  "properties": {
+    "tenant_id": {"type": "string", "format": "uuid"},
+    "source": {"type": "string", "enum": ["sdk", "zendesk", "intercom", "appstore", "csv", "slack", "api"]},
+    "type": {"type": "string", "enum": ["bug", "feature_request", "crash", "support", "other"]},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "actor_hash": {"type": ["string", "null"]},
+    "title": {"type": "string", "maxLength": 300},
+    "body": {"type": "string", "maxLength": 20000},
+    "app_version": {"type": ["string", "null"]},
+    "os": {"type": ["string", "null"]},
+    "service_hint": {"type": ["string", "null"]},
+    "external_id": {"type": ["string", "null"]},
+    "urls": {"type": "array", "items": {"type": "string"}}
+  }
+}

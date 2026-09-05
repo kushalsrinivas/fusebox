@@ -1,0 +1,27 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -r apps/api/requirements.txt -r workers/ingest/requirements.txt -r workers/agent/requirements.txt
+      - run: pip install -e workers/indexer -e workers/correlation -e workers/ingest -e workers/agent -e workers/graph -e workers/action -e workers/verify -e workers/insights
+      - run: cd apps/api && pytest -q
+      - run: cd workers/ingest && pytest -q
+      - run: cd workers/agent && pytest -q && python evals/run_investigation_evals.py
+      - run: cd workers/indexer && pytest -q && python evals/run_evals.py --min-pass 16
+      - run: cd workers/correlation && pytest -q
+      - run: cd workers/graph && pytest -q
+      - run: cd workers/action && pytest -q && python evals/run_action_evals.py
+      - run: cd workers/verify && pytest -q
+      - run: cd workers/insights && pytest -q
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 20}
+      - run: cd apps/web && npm ci && npm run typecheck && npm run build
