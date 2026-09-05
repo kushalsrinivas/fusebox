@@ -99,11 +99,22 @@ export function ActionsPanel() {
             <code>{a.branch || "(rejected)"}</code> — <strong>{a.status}</strong>
             {a.risk?.level ? (
               <>
-                {" "}risk {a.risk.level} ({a.risk.score})
+                {" "}risk: {a.risk.level}
+                {a.risk.factors?.length ? (
+                  <small> ({a.risk.factors.join("; ")})</small>
+                ) : null}
               </>
             ) : null}{" "}
+            {a.sandbox?.levels ? (
+              <small>
+                validation:{" "}
+                {Object.entries(a.sandbox.levels)
+                  .map(([k, v]) => `${k}=${v}`)
+                  .join(", ")}
+              </small>
+            ) : null}{" "}
             {a.pr_url ? <a href={a.pr_url}>PR</a> : null}{" "}
-            {a.status === "sandbox_passed" && (
+            {a.status === "validated" && (
               <>
                 <button onClick={() => approve(a)}>Approve</button>{" "}
                 {a.risk?.requires_two_approvals && (
@@ -113,7 +124,7 @@ export function ActionsPanel() {
             )}
             <br />
             <small>{a.title}</small>{" "}
-            {(a.status === "approved" || a.status === "sandbox_passed") && (
+            {(a.status === "approved" || a.status === "validated") && (
               <button onClick={() => verify(a)}>Verify fix</button>
             )}
           </li>

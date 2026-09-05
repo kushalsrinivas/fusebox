@@ -37,7 +37,7 @@ def verify_action(aid: str, window_h: float = Query(default=24.0, le=24 * 30),
     action = db.get_action(tenant_id, aid)
     if action is None:
         raise HTTPException(status_code=404, detail="action not found")
-    if action["status"] not in ("approved", "sandbox_passed"):
+    if action["status"] not in ("approved", "validated"):
         raise HTTPException(status_code=422, detail={
             "error": f"nothing deployed yet (action is {action['status']})",
             "hint": "verify runs after approve/merge; earlier is always inconclusive"})

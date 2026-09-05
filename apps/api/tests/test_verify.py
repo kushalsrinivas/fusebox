@@ -88,7 +88,7 @@ def test_verify_requires_approved_action():
     c = TestClient(app)
     row = db.save_action(TENANT, {
         "cluster_id": None, "investigation_id": None, "repo": "demo",
-        "branch": "", "title": "t", "diff": "d", "status": "sandbox_failed",
+        "branch": "", "title": "t", "diff": "d", "status": "validation_failed",
         "risk": {}, "sandbox": {}, "dry_run": True})
     r = c.post(f"/v1/actions/{row['id']}/verify", headers={"X-API-Key": KEY})
     assert r.status_code == 422

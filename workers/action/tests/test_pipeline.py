@@ -24,6 +24,15 @@ BROKEN = """--- a/apps/payments/checkout.py
 def test_sandbox_passes_clean_diff():
     res = run_checks(BASE, GOOD)
     assert res["ok"] and res["applied"] == ["apps/payments/checkout.py"], res
+    # syntax ran; tests honestly report they did not.
+    assert res["levels"] == {"syntax": "passed", "tests": "not_run"}
+
+
+def test_sandbox_runs_configured_tests():
+    res = run_checks(BASE, GOOD, extra_checks=[["python3", "-c", "pass"]])
+    assert res["ok"] and res["levels"]["tests"] == "passed"
+    res = run_checks(BASE, GOOD, extra_checks=[["python3", "-c", "import sys; sys.exit(1)"]])
+    assert not res["ok"] and res["levels"]["tests"] == "failed"
 
 
 def test_sandbox_fails_syntax_error():

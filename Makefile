@@ -1,6 +1,14 @@
-.PHONY: api web worker test seed index-demo eval-code eval-investigations eval-actions load-test
+.PHONY: api web worker test seed index-demo eval-code eval-investigations eval-actions load-test dev
+# One command: bootstrap (first run) + serve the API. Then open apps/web (`make web`).
+dev: .venv
+	.venv/bin/python -m uvicorn app.main:app --port 8000 --app-dir apps/api
+
+.venv:
+	python3 -m venv .venv
+	.venv/bin/pip install -q -r apps/api/requirements.txt -r workers/ingest/requirements.txt -r workers/agent/requirements.txt
+	.venv/bin/pip install -q -e workers/indexer -e workers/correlation -e workers/ingest -e workers/agent -e workers/graph -e workers/action -e workers/verify -e workers/insights -e workers/billing
 api:
-	cd apps/api && uvicorn app.main:app --reload --port 8000
+	.venv/bin/python -m uvicorn app.main:app --reload --port 8000 --app-dir apps/api
 web:
 	cd apps/web && npm run dev
 test:

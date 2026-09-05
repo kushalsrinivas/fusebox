@@ -126,8 +126,9 @@ def propose_action(payload: ProposeIn, tenant_id: str = Depends(tenant_from_key)
         "repo": payload.repo, "branch": branch,
         "title": payload.title or f"[Fusebox] {cluster['title']}",
         "diff": payload.diff,
-        "status": "sandbox_passed" if sandbox["ok"] else "sandbox_failed",
-        "risk": risk, "sandbox": {"ok": sandbox["ok"], "logs": sandbox["logs"]},
+        "status": "validated" if sandbox["ok"] else "validation_failed",
+        "risk": risk, "sandbox": {"ok": sandbox["ok"], "logs": sandbox["logs"],
+                                  "levels": sandbox.get("levels", {})},
         "dry_run": True})
     quotas.bump("actions", tenant_id)
     return {"action": row, "risk": risk, "sandbox": sandbox}
@@ -161,9 +162,9 @@ def approve_action(aid: str, payload: ApproveIn,
     row = db.get_action(tenant_id, aid)
     if row is None:
         raise HTTPException(status_code=404, detail="action not found")
-    if row["status"] != "sandbox_passed":
+    if row["status"] != "validated":
         raise HTTPException(status_code=422,
-                            detail=f"action is {row['status']}; only sandbox_passed can be approved")
+                            detail=f"action is {row['status']}; only validated actions can be approved")
     risk = row.get("risk") or {}
     if risk.get("requires_two_approvals") and not payload.confirm_high_risk:
         raise HTTPException(status_code=422, detail={

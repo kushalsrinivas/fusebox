@@ -26,7 +26,8 @@ def run_checks(base_files: dict[str, str], diff: str,
     try:
         files = parse_diff(diff)
     except ValueError as e:
-        return {"ok": False, "applied": [], "logs": [f"unparseable diff: {e}"], "checks": []}
+        return {"ok": False, "applied": [], "logs": [f"unparseable diff: {e}"],
+                "checks": [], "levels": {"syntax": "not_run", "tests": "not_run"}}
     paths = changed_paths(files)
     tmp = Path(tempfile.mkdtemp(prefix="pil-sandbox-"))
     try:
@@ -39,20 +40,33 @@ def run_checks(base_files: dict[str, str], diff: str,
         logs.append(f"applied {len(paths)} file(s) to {tmp}")
 
         results = []
+        levels: dict[str, str] = {}
         py_files = [p for p in paths if p.endswith(".py") and (tmp / p).exists()]
         if py_files:
             r = _run(["python3", "-m", "py_compile", *py_files], tmp, timeout_s)
             results.append(r)
             logs.append(f"py_compile: rc={r['rc']}")
-        for cmd in extra_checks or []:
-            r = _run(cmd, tmp, timeout_s)
-            results.append(r)
-            logs.append(f"{' '.join(cmd)}: rc={r['rc']}")
+            # Honest naming: this proves syntax, nothing more.
+            levels["syntax"] = "passed" if r["rc"] == 0 else "failed"
+        else:
+            levels["syntax"] = "skipped"
+        if extra_checks:
+            for cmd in extra_checks:
+                r = _run(cmd, tmp, timeout_s)
+                results.append(r)
+                logs.append(f"{' '.join(cmd)}: rc={r['rc']}")
+            levels["tests"] = "passed" if all(
+                x["rc"] == 0 for x in results[1 if py_files else 0:]) else "failed"
+        else:
+            # No test command was configured: say so, don't imply it.
+            levels["tests"] = "not_run"
         ok = all(r["rc"] == 0 for r in results)
-        return {"ok": ok, "applied": paths, "logs": logs, "checks": results}
+        return {"ok": ok, "applied": paths, "logs": logs, "checks": results,
+                "levels": levels}
     except subprocess.TimeoutExpired as e:
         return {"ok": False, "applied": paths,
-                "logs": logs + [f"TIMEOUT after {timeout_s}s: {e.cmd}"], "checks": []}
+                "logs": logs + [f"TIMEOUT after {timeout_s}s: {e.cmd}"], "checks": [],
+                "levels": {"syntax": "not_run", "tests": "not_run"}}
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

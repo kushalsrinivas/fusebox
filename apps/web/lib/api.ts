@@ -178,7 +178,7 @@ export interface Action {
   title: string;
   status: string;
   risk: { score: number; level: string; factors: string[]; requires_two_approvals: boolean };
-  sandbox: { ok?: boolean; logs?: string[] };
+  sandbox: { ok?: boolean; logs?: string[]; levels?: Record<string, string> };
   pr_url: string | null;
   dry_run: boolean;
 }

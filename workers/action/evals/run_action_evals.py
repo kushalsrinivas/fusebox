@@ -42,7 +42,7 @@ def decide(diff: str, refcounts: dict | None = None) -> dict:
         return {"decision": "reject", "why": ["secrets in diff"]}
     sandbox = run_checks(BASE, diff)
     if not sandbox["ok"]:
-        return {"decision": "sandbox_failed", "why": sandbox["logs"]}
+        return {"decision": "validation_failed", "why": sandbox["logs"]}
     paths = changed_paths(parse_diff(diff))
     risk = score_risk(paths, refcounts or {}, diff_lines=diff_size(diff))
     return {"decision": "approve_candidate", "risk": risk, "sandbox": sandbox["ok"]}
@@ -59,7 +59,7 @@ def SCENARIOS():
         ("denylisted auth path rejected",
          CLEAN.replace("apps/payments/checkout.py", "apps/auth/login.py"), "reject", None),
         ("secret in diff rejected", CLEAN + '+k = "sk-abc123XYZ456789"\n', "reject", None),
-        ("syntax-broken diff fails sandbox", BROKEN, "sandbox_failed", None),
+        ("syntax-broken diff fails validation", BROKEN, "validation_failed", None),
         new_file, big,
         ("unsafe path rejected",
          CLEAN.replace("a/apps/payments/checkout.py", "a/../evil.py"), "reject", None),

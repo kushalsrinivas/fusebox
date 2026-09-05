@@ -59,8 +59,10 @@ def test_propose_clean_diff_sandbox_passes(tmp_path, monkeypatch):
                json={"cluster_id": big["id"], "repo": "demo", "diff": GOOD_DIFF})
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["action"]["status"] == "sandbox_passed", body
+    assert body["action"]["status"] == "validated", body
     assert body["sandbox"]["ok"] is True
+    assert body["sandbox"]["levels"]["syntax"] == "passed"
+    assert body["sandbox"]["levels"]["tests"] == "not_run"
     assert body["risk"]["level"] in ("low", "medium", "high")
     assert body["action"]["branch"].startswith("fuse/")
 
@@ -90,7 +92,7 @@ def test_propose_broken_diff_sandbox_fails(tmp_path, monkeypatch):
     r = c.post("/v1/actions/propose", headers={"X-API-Key": KEY},
                json={"cluster_id": big["id"], "repo": "demo", "diff": broken})
     assert r.status_code == 200, r.text
-    assert r.json()["action"]["status"] == "sandbox_failed"
+    assert r.json()["action"]["status"] == "validation_failed"
     aid = r.json()["action"]["id"]
     r2 = c.post(f"/v1/actions/{aid}/approve", headers={"X-API-Key": KEY}, json={})
     assert r2.status_code == 422
